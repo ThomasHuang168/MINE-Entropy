@@ -113,7 +113,7 @@ class Minee():
             log.write("gaussian_ref={0}\n".format(self.gaussian_ref))
             log.write("gaussian_ref_var={0}\n".format(self.gaussian_ref_var))
             log.close()
-            if self.googleDrive:
+            if self.googleDrive and self.prefixID:
                 self.googleDrive.uploadFile(log_file, "{}_train.log".format(self.model_name), self.prefixID)
 
         self.ixy_list = []
@@ -255,7 +255,7 @@ class Minee():
                         torch.save(self.state_dict(),f)
                         if self.verbose:
                             print('results saved: '+str(snapshot_i))
-                    if self.googleDrive:
+                    if self.googleDrive and self.prefixID:
                         self.googleDrive.uploadFile(fname_i, "cache_iter={}.pt".format(i+1), parentID=self.prefixID)
                         os.remove(fname_i)
                         snapshot_i += 1
@@ -369,7 +369,10 @@ class Minee():
         fpath = os.path.join(self.prefix, "archive")
         if not os.path.exists(fpath):
             os.mkdir(fpath)
-            self.archiveID = self.googleDrive.createFolder("archive", self.prefixID)
+        if self.googleDrive and self.prefixID:
+            self.archiveID = self.googleDrive.searchFolder("archive", parentID=self.prefixID)
+            if not self.archiveID:
+                self.archiveID = self.googleDrive.createFolder("archive", self.prefixID)
         if self.video_rate>0:
             self.save_video(array_end)
         fname__ = "[{}-{}).pt".format(self.array_start, array_end)
@@ -396,7 +399,7 @@ class Minee():
             if self.video_rate>0:
                 for j in range(self.rep):
                     self.ixy_list[j] = np.zeros(self.ixy_list_shape)
-        if self.googleDrive:
+        if self.googleDrive and self.archiveID:
             self.googleDrive.uploadFile(fname,  fname__, self.archiveID)
             os.remove(fname)
 
@@ -664,7 +667,7 @@ class Minee():
         figName = os.path.join(self.prefix, "{}_{}.png".format(self.model_name, suffix))
         fig.savefig(figName, bbox_inches='tight')
         plt.close()
-        if self.googleDrive:
+        if self.googleDrive and self.prefixID:
             self.googleDrive.uploadFile(figName,   "{}_{}.png".format(self.model_name, suffix), self.prefixID)
             os.remove(figName)
 

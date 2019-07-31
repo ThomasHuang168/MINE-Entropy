@@ -101,3 +101,7 @@ class GoogleDrive():
         #         print(u'{0} ({1})'.format(item['name'], item['id']))
         # return items
     
+
+if __name__ == '__main__':
+    gd = GoogleDrive()
+    gd.connect()

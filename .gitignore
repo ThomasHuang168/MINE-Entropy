@@ -16,3 +16,6 @@ octave-workspace
 **/backup/
 **/disktop.ini
 *.png
+credentials.json
+token.pickle
+qs.py
