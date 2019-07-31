@@ -80,10 +80,13 @@ class GoogleDrive():
         #         print(u'{0} ({1})'.format(item['name'], item['id']))
         return items
     
-    def searchFolder(self, folderName, numFile=1):
+    def searchFolder(self, folderName, numFile=1, parentID=None):
         # Call the Drive v3 API
+        query = "mimeType='application/vnd.google-apps.folder' and name='{}'".format(folderName)
+        if parentID:
+            query = query + " and '{}' in parents".format(parentID)
         results = self.service.files().list(
-            q="mimeType='application/vnd.google-apps.folder' and name='{}'".format(folderName),
+            q=query,
             pageSize=numFile, 
             fields="nextPageToken, files(id, name)").execute()
         items = results.get('files', [])
