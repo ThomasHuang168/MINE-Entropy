@@ -1,20 +1,16 @@
 import numpy as np
-from .model import mine
+random_seed = 0
+np.random.seed(seed=random_seed)
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import math
-from scipy.stats import randint
 import os
-from .utils import save_train_curve
 # from model import Mine, LinearReg, Kraskov
 from joblib import Parallel, delayed
+from . import settings
 from tqdm import tqdm
 from .util.google_drive_util import GoogleDrive
-import torch
-
-from . import settings as settings
-settings_file = "settings.py"
 
 def saveResultsFig(results_dict, experiment_path=""):
     """
@@ -59,7 +55,7 @@ def saveResultsFig(results_dict, experiment_path=""):
     fig.savefig(figName, bbox_inches='tight')
     plt.close()
 
-def get_estimation(model_name, model, data_model, data_name, varying_param_name, varying_param_value, experiment_path, pop, batch, rootID, googleDrive, path_exist):
+def get_estimation(model_name, model, data_model, data_name, varying_param_name, varying_param_value, experiment_path, pop, batch, rootID, googleDrive):
     """
     Returns: mi estimate (float)
     """
@@ -81,11 +77,7 @@ def get_estimation(model_name, model, data_model, data_name, varying_param_name,
     prefix_name_loop = os.path.join(experiment_path, pathname)
     if not os.path.exists(prefix_name_loop):
         os.makedirs(prefix_name_loop, exist_ok=True)
-    if googleDrive:
-        prefixID = None
-        if path_exist:
-            prefixID = googleDrive.searchFolder(pathname, parentID=rootID)
-        if not prefixID:
+        if googleDrive:
             prefixID = googleDrive.createFolder(pathname, rootID)
     
     # if X_train.shape[1]==1:
@@ -124,6 +116,7 @@ def get_estimation(model_name, model, data_model, data_name, varying_param_name,
     model['model'].load_all_array()
     model['model'].save_figure(suffix="all")
 
+
     # Save Results
     # results[model_name] = mi_estimation
 
@@ -132,7 +125,7 @@ def get_estimation(model_name, model, data_model, data_name, varying_param_name,
 
     return mi_estimation, ground_truth, model_name, data_name, varying_param_value
 
-def plot(experiment_path, rootID, googleDrive, path_exist):
+def plot(experiment_path, rootID, googleDrive):
     # Initialize the results dictionary
 
     # results example: 
@@ -176,8 +169,7 @@ def plot(experiment_path, rootID, googleDrive, path_exist):
                                                               pop_,
                                                               batch_,
                                                               rootID,
-                                                              googleDrive,
-                                                              path_exist) 
+                                                              googleDrive) 
                                                                     for pop_, batch_ in tqdm(settings.pop_batch)
                                                                     for model_name, model in tqdm(settings.model.items())
                                                                     for data_name, data in tqdm(settings.data.items())
@@ -197,10 +189,8 @@ def run_experiment():
     experiment_path = os.path.join(settings.output_path, experiment_name)
     googleDrive = GoogleDrive()
     googleDrive.connect()
-    path_exist = False
     while True:
         if os.path.exists(experiment_path):
-            path_exist = True
             rootID = googleDrive.searchFolder(experiment_name)
             if not rootID:
                 raise ValueError("folder {} not found in googledrive".format(experiment_name))
@@ -211,19 +201,15 @@ def run_experiment():
             os.makedirs(experiment_path)
             rootID = googleDrive.createFolder(experiment_name)
             print('Output will be saved into {}'.format(experiment_path))
-            break
-    # save the settings
-    from shutil import copyfile
-    mmi_dir_path = os.path.dirname(os.path.abspath(__file__))
-    settings_path = os.path.join(mmi_dir_path, settings_file)
-    copyfile(settings_path, os.path.join(experiment_path, settings_file))
-    if not path_exist:
-        googleDrive.uploadFile(settings_path, 'settings.py', rootID)
-    plot(experiment_path, rootID, googleDrive, path_exist)
+            # save the settings
+            from shutil import copyfile
+            mmi_dir_path = os.path.dirname(os.path.abspath(__file__))
+            settings_path = os.path.join(mmi_dir_path, 'settings.py')
+            copyfile(settings_path, os.path.join(experiment_path, 'settings.py'))
+            googleDrive.uploadFile(settings_path, 'settings.py', rootID)
+            break     
+    plot(experiment_path, rootID, googleDrive)
 
 if __name__ == "__main__":
-    random_seed = 0
-    np.random.seed(seed=random_seed)
-    torch.manual_seed(seed=random_seed)
     run_experiment()
     # run_experiment_batch_pop_ir()
