@@ -62,8 +62,8 @@ model = {
             gaussian_ref=True,
             gaussian_ref_var=0
         ), 
-    #     'color': 'purple'
-    # },
+        'color': 'purple'
+    },
     # 'MINE': {
     #     'model': Mine(
     #         lr=lr, 
