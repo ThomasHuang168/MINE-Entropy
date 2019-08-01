@@ -36,8 +36,8 @@ video_frames=int(0)
 
 
 time_now = datetime.now()
-output_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "experiments")
-# output_path = os.path.join("/public/hphuang", "experiments")
+# output_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "experiments")
+output_path = os.path.join("/public/hphuang", "experiments")
 
 # ground truth is plotted in red
 model = {
@@ -108,8 +108,8 @@ sample_size = 400
 
 xy_comb = [
     # (54,115), 
-    # (56,115), 
-    (58,115)
+    (56,115), 
+    # (58,115)
     ]
 # xy_comb = list()
 # for j in range(1, 8):
