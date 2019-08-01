@@ -184,7 +184,11 @@ class Minee():
         self.Xlist_ref_t = []
         self.Ylist_ref_t = []
         if self.gaussian_ref:
-            self.gaussian = Gaussian(sample_size=self.sample_size, rho=0, mean=np.zeros(self.dim*2).tolist(), var=self.gaussian_ref_var)
+            if self.gaussian_ref_var == 0:
+                # temp implementation
+                self.gaussian = Gaussian(sample_size=self.sample_size, rho=0, mean=np.average(data_train,axis=0).tolist(), var=np.var(data_train, axis=0))
+            else:
+                self.gaussian = Gaussian(sample_size=self.sample_size, rho=0, mean=np.zeros(self.dim*2).tolist(), var=self.gaussian_ref_var)
         if self.fix_ref_est:
             for i in range(self.rep):
                 if self.gaussian_ref:
