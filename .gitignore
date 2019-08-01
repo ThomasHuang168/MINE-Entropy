@@ -19,3 +19,7 @@ octave-workspace
 credentials.json
 token.pickle
 qs.py
+condor/*
+condor2/*
+mutual_funds.csv
+*.condor

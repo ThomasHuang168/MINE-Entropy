@@ -6,11 +6,10 @@ import torch
 
 # Use GPU when available
 # Need to use Tensor to create the tensor of default type
-if torch.cuda.is_available():
-    torch.set_default_tensor_type(torch.cuda.FloatTensor)
-else:
-    torch.set_default_tensor_type(torch.FloatTensor)
+cuda = True if torch.cuda.is_available() else False
 
+FloatTensor = torch.cuda.FloatTensor if cuda else torch.FloatTensor
+LongTensor = torch.cuda.LongTensor if cuda else torch.LongTensor
 
 import torch.nn as nn
 import torch.nn.functional as F
@@ -137,7 +136,7 @@ class Mine():
             y = np.linspace(Ymin, Ymax, 300)
             xs, ys = np.meshgrid(x,y)
             # mesh = torch.FloatTensor(np.hstack((xs.flatten()[:,None],ys.flatten()[:,None])))
-            mesh = torch.FloatTensor(np.hstack((xs.flatten()[:,None],ys.flatten()[:,None])))
+            mesh = FloatTensor(np.hstack((xs.flatten()[:,None],ys.flatten()[:,None])))
             self.ixy_list_shape = np.append(np.array(xs.shape), 0).tolist()
             # ixy_list = np.zeros(self.ixy_list_shape)
             for _ in range(self.rep):
@@ -147,6 +146,8 @@ class Mine():
         self.XYlist_optimizer = []
         for i in range(self.rep):
             self.XYlist_net.append(MineNet(input_size=self.dim*2,hidden_size=self.hidden_size))
+            if cuda:
+                self.XYlist_net[i].cuda()
             self.XYlist_optimizer.append(optim.Adam(self.XYlist_net[i].parameters(),lr=self.lr))
 
         self.Train_dXY_list = np.zeros((self.rep, 0))
@@ -172,7 +173,7 @@ class Mine():
         self.XYlist_t = []
         self.XYlist_ref_t = []
         for i in range(self.rep):
-            self.XYlist_t.append(torch.Tensor(np.concatenate((self.Trainlist_X[i],self.Trainlist_Y[i]),axis=1)))
+            self.XYlist_t.append(FloatTensor(np.concatenate((self.Trainlist_X[i],self.Trainlist_Y[i]),axis=1)))
 
             if self.full_ref:
                 Train_X_ref, Train_Y_ref = np.meshgrid(self.Trainlist_X[i], self.Trainlist_Y[i].T)
@@ -182,7 +183,7 @@ class Mine():
                 else:
                     Train_X_ref = Train_X_ref[:self.sample_size,:].reshape((self.sample_size**2), self.dim)
                     Train_Y_ref = Train_Y_ref[:,:self.sample_size].reshape(self.dim, (self.sample_size**2)).T
-                self.XYlist_ref_t.append(torch.Tensor(np.concatenate((Train_X_ref,Train_Y_ref),axis=1)))
+                self.XYlist_ref_t.append(FloatTensor(np.concatenate((Train_X_ref,Train_Y_ref),axis=1)))
             elif self.fix_ref_est:
                 if self.ref_factor > 1:
                     Train_X_ref = resample(self.Trainlist_X[i],batch_size=int(self.sample_size*self.ref_factor), replace=True)
@@ -190,7 +191,7 @@ class Mine():
                 else:
                     Train_X_ref = resample(self.Trainlist_X[i],batch_size=int(self.sample_size*self.ref_factor), replace=False)
                     Train_Y_ref = resample(self.Trainlist_Y[i],batch_size=int(self.sample_size*self.ref_factor), replace=False)
-                self.XYlist_ref_t.append(torch.Tensor(np.concatenate((Train_X_ref,Train_Y_ref),axis=1)))
+                self.XYlist_ref_t.append(FloatTensor(np.concatenate((Train_X_ref,Train_Y_ref),axis=1)))
 
         if type(self.Train_dXY_list)==np.ndarray and self.Train_dXY_list.ndim == 2:
             start_i = len(self.Train_dXY_list[0,:]) + self.array_start
@@ -221,7 +222,7 @@ class Mine():
 
             if self.video_rate>0 and (i+1)%self.video_rate==0:
                 for j in range(self.rep):
-                    ixy = self.XYlist_net[j](mesh).detach().numpy()
+                    ixy = self.XYlist_net[j](mesh).detach().cpu().numpy()
                     ixy = ixy.reshape(xs.shape[1], ys.shape[0])
                     self.ixy_list[j] = np.append(self.ixy_list[j], ixy[...,None], axis=2)
 
@@ -254,7 +255,7 @@ class Mine():
 
     def update_mine_net(self, X, Y, batch_size, ma_rate):
         for i in range(self.rep):
-            # XY_t = torch.Tensor(np.concatenate((X[i],Y[i]),axis=1))
+            # XY_t = FloatTensor(np.concatenate((X[i],Y[i]),axis=1))
             XY_t = np.concatenate((X[i],Y[i]),axis=1)
             batch_XY = resample(XY_t,batch_size=batch_size)
 
@@ -266,11 +267,11 @@ class Mine():
                 else:
                     batch_X_ref = batch_X_ref[:batch_size,:].reshape((batch_size**2), self.dim)
                     batch_Y_ref = batch_Y_ref[:,:batch_size].reshape(self.dim, (batch_size**2)).T
-                batch_XY_ref = torch.Tensor(np.concatenate((batch_X_ref,batch_Y_ref),axis=1))
+                batch_XY_ref = FloatTensor(np.concatenate((batch_X_ref,batch_Y_ref),axis=1))
             else:
-                batch_XY_ref = torch.Tensor(np.concatenate((resample(X[i],batch_size=batch_size),                                                         resample(Y[i],batch_size=batch_size)),axis=1))
+                batch_XY_ref = FloatTensor(np.concatenate((resample(X[i],batch_size=batch_size),                                                         resample(Y[i],batch_size=batch_size)),axis=1))
 
-            batch_XY = torch.Tensor(batch_XY)
+            batch_XY = FloatTensor(batch_XY)
             self.XYlist_optimizer[i].zero_grad()
             fXY = self.XYlist_net[i](batch_XY)
             efXY_ref = torch.exp(self.XYlist_net[i](batch_XY_ref))
@@ -291,9 +292,9 @@ class Mine():
                 else:
                     X_ref = resample(X[i],batch_size=int(self.sample_size*self.ref_factor), replace=False)
                     Y_ref = resample(Y[i],batch_size=int(self.sample_size*self.ref_factor), replace=False)
-                XY_ref_t = torch.Tensor(np.concatenate((X_ref,Y_ref),axis=1))
+                XY_ref_t = FloatTensor(np.concatenate((X_ref,Y_ref),axis=1))
 
-            XY_t = torch.Tensor(np.concatenate((X[i],Y[i]),axis=1))
+            XY_t = FloatTensor(np.concatenate((X[i],Y[i]),axis=1))
 
             dXY = torch.mean(self.XYlist_net[i](XY_t)) - (torch.logsumexp(self.XYlist_net[i](XY_ref_t), 0) - self.XY_ref_t_log_size)
             dXY_list[i, 0] = dXY.cpu().item()
@@ -414,8 +415,8 @@ class Mine():
             y = np.linspace(Ymin, Ymax, 300)
             xs, ys = np.meshgrid(x,y)
             # mesh = torch.FloatTensor(np.hstack((xs.flatten()[:,None],ys.flatten()[:,None])))
-            mesh = torch.FloatTensor(np.hstack((xs.flatten()[:,None],ys.flatten()[:,None])))
-            ixy = self.XYlist_net[0](mesh).detach().numpy()
+            mesh = FloatTensor(np.hstack((xs.flatten()[:,None],ys.flatten()[:,None])))
+            ixy = self.XYlist_net[0](mesh).detach().cpu().numpy()
             ixy = ixy.reshape(xs.shape[1], ys.shape[0])
 
             axCur = ax[0, 2]
